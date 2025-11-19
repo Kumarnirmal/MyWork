@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Kids Cloth Store — Catalog</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{--accent:#007bff;--muted:#666;--header-bg:#f0f6ff}
+    *{box-sizing:border-box}
+    body{font-family:Inter,Arial,Helvetica,sans-serif;margin:0;background:#f7f7f7;color:#222}
+    /* Header & Nav */
+    header{background:var(--accent);color:#fff;padding:16px 20px;font-size:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .header-right{font-size:13px;color:#e8f3ff}
+    .menuBar{background:#fff;border-bottom:1px solid #e6e6e6;padding:10px 20px;display:flex;justify-content:center}
+    .menuBar a{margin:0 12px;color:#333;text-decoration:none;font-weight:600}
+    .menuBar a:hover{text-decoration:underline}
+    .container{max-width:1100px;margin:18px auto;padding:0 12px}
+    .controls{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:12px 0;flex-wrap:wrap}
+    .controls .left{display:flex;gap:12px;align-items:center}
+    .controls input[type="search"]{padding:8px;border-radius:6px;border:1px solid #ddd}
+    select{padding:6px;border-radius:6px;border:1px solid #ddd}
+    /* Category section header bar */
+    .sectionHeader{background:linear-gradient(90deg,#e9f1ff, #f7fbff);padding:12px 16px;border-radius:6px;margin-top:20px;border:1px solid #e3eefc;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+    .sectionTitle{font-weight:700}
+    .sectionBody{margin-top:12px}
+    /* Grid & Cards */
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+    .card{background:#fff;border-radius:8px;padding:12px;box-shadow:0 1px 6px rgba(0,0,0,0.06);display:flex;flex-direction:column;min-height:320px}
+    .card img{width:100%;height:180px;object-fit:cover;border-radius:6px}
+    .card h4{margin:10px 0 6px;font-size:16px}
+    .price{font-weight:700;margin-bottom:8px;color:var(--accent)}
+    .small{font-size:13px;color:var(--muted)}
+    .btn{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radius:6px;cursor:pointer}
+    /* Cart */
+    .cartPanel{position:fixed;right:16px;top:20px;width:320px;background:#fff;border-radius:8px;padding:12px;box-shadow:0 6px 24px rgba(0,0,0,0.12);z-index:999}
+    .cartItem{display:flex;justify-content:space-between;margin-bottom:8px}
+    /* Footer */
+    footer{padding:20px;text-align:center;color:#666;border-top:1px solid #eee;margin-top:40px;background:#fff}
+    /* Responsive */
+    @media(max-width:1024px){
+      .cartPanel{right:12px;left:auto;width:280px}
+    }
+    @media(max-width:800px){
+      .grid{grid-template-columns:repeat(2,1fr)}
+      .menuBar{padding:8px}
+    }
+    @media(max-width:520px){
+      .grid{grid-template-columns:repeat(1,1fr)}
+      .container{padding:0 10px}
+      .cartPanel{position:static;width:auto;margin:12px}
+    }
+    /* small helpers */
+    .muted{color:var(--muted);font-size:13px}
+    .hidden{display:none}
+    .section-wrap{margin-bottom:18px}
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>Kids Clothing Store</div>
+    <div class="header-right">Showing clothes from <strong>kids.json</strong></div>
+  </header>
+
+  <div class="menuBar">
+    <a href="#" id="menuHome">Home</a>
+    <a href="#productsTop" id="menuProducts">Products</a>
+    <a href="#contact" id="menuContact">Contact</a>
+    <a href="#" id="menuCart">Show Cart</a>
+  </div>
+
+  <main class="container">
+    <div class="controls" id="topControls">
+      <div class="left">
+        <label class="small">Items per page:
+          <select id="pageSize">
+            <option value="6">6</option>
+            <option value="8">8</option>
+            <option value="10" selected>10</option>
+            <option value="12">12</option>
+          </select>
+        </label>
+        <label class="small" style="margin-left:10px">Sort:
+          <select id="sortBy">
+            <option value="name" selected>Name A→Z</option>
+            <option value="price">Price Low→High</option>
+          </select>
+        </label>
+      </div>
+      <div>
+        <input id="searchInput" type="search" placeholder="Search name or description..." />
+      </div>
+    </div>
+
+    <!-- anchor for products -->
+    <div id="productsTop" style="height:1px"></div>
+
+    <!-- Category sections (always visible) -->
+    <div id="sectionsContainer">
+      <!-- Sections will be created dynamically by JS in fixed order -->
+    </div>
+
+    <div style="text-align:center;margin:18px 0">
+      <button id="loadMoreBtn" class="btn">Load More</button>
+    </div>
+  </main>
+
+  <aside class="cartPanel" aria-label="Cart">
+    <h3>🛒 Cart</h3>
+    <div id="cartList"></div>
+    <hr>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Total</strong>
+      <strong>₹ <span id="total">0</span></strong>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button id="clearCart" class="btn" style="flex:1;background:#dc3545">Clear</button>
+      <button id="checkout" class="btn" style="flex:1">Checkout</button>
+    </div>
+  </aside>
+
+  <footer id="contact">
+    Email: support@kidstore.com | Phone: +91 99999 99999
+  </footer>
+
+<script>
+(async function(){
+  // CONFIG
+  const JSON_FILE = 'kids.json'; // must be located alongside this index.html
+  const BASE_PATH = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+  const CATEGORIES = [
+    { key: 'kids-1-3', title: 'Kids 1–3 Years', matcher: item => inRange(item.ageRange,1,3) },
+    { key: 'kids-3-6', title: 'Kids 3–6 Years', matcher: item => inRange(item.ageRange,3,6) },
+    { key: 'boys-5-10', title: 'Boys 5–10 Years', matcher: item => inRange(item.ageRange,5,10) && isBoy(item) },
+    { key: 'girls-5-10', title: 'Girls 5–10 Years', matcher: item => inRange(item.ageRange,5,10) && isGirl(item) },
+    { key: 'toys', title: 'Toys Section', matcher: item => isToy(item) }
+  ];
+
+  // UI refs
+  const sectionsContainer = document.getElementById('sectionsContainer');
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+  const pageSizeSelect = document.getElementById('pageSize');
+  const searchInput = document.getElementById('searchInput');
+  const sortBySelect = document.getElementById('sortBy');
+
+  // state
+  let allItems = [];      // raw items array from JSON
+  let filtered = [];      // filtered & sorted global list
+  let shownCount = 0;     // how many items of filtered list have been rendered (global)
+  let pageSize = parseInt(pageSizeSelect.value,10);
+  let cart = JSON.parse(localStorage.getItem('kids_store_cart_v1') || '[]');
+
+  // Create section DOM blocks in fixed order
+  const sectionMap = {};
+  CATEGORIES.forEach(cat=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'section-wrap';
+    const header = document.createElement('div');
+    header.className = 'sectionHeader';
+    header.innerHTML = `<div class="sectionTitle">${cat.title}</div><div class="small">+</div>`;
+    const body = document.createElement('div');
+    body.className = 'sectionBody hidden';
+    // inside body, a grid container
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    body.appendChild(grid);
+
+    wrap.appendChild(header);
+    wrap.appendChild(body);
+    sectionsContainer.appendChild(wrap);
+
+    // store references
+    sectionMap[cat.key] = { wrap, header, body, grid, title: cat.title };
+
+    // header click toggles collapse and scroll
+    header.addEventListener('click', ()=> {
+      const isHidden = body.classList.contains('hidden');
+      // toggle
+      if(isHidden){
+        body.classList.remove('hidden');
+        header.querySelector('.small').textContent = '−';
+        body.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        body.classList.add('hidden');
+        header.querySelector('.small').textContent = '+';
+      }
+    });
+  });
+
+  // CART utility functions
+  function saveCart(){ localStorage.setItem('kids_store_cart_v1', JSON.stringify(cart)); renderCart(); }
+  function addToCart(item){
+    const existing = cart.find(x=>x.id===item.id);
+    if(existing) existing.qty += 1;
+    else cart.push({...item, qty:1});
+    saveCart();
+  }
+  function changeQty(id, delta){
+    const it = cart.find(i=>i.id===id); if(!it) return;
+    it.qty += delta;
+    if(it.qty <= 0) cart = cart.filter(x=>x.id!==id);
+    saveCart();
+  }
+  function renderCart(){
+    const container = document.getElementById('cartList');
+    container.innerHTML = '';
+    if(cart.length === 0){ container.innerHTML = '<div class="small">Cart is empty</div>'; document.getElementById('total').innerText = 0; return; }
+    let total = 0;
+    cart.forEach(i=>{
+      const row = document.createElement('div');
+      row.className = 'cartItem';
+      row.innerHTML = `
+        <div style="flex:1">
+          <div style="font-weight:600">${escapeHtml(i.name)}</div>
+          <div class="small">₹ ${i.price} × ${i.qty}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+          <button class="small btn" style="padding:6px 6px;margin-bottom:4px" onclick="changeQtyLocal('${i.id}',1)">+</button>
+          <button class="small btn" style="padding:6px 6px" onclick="changeQtyLocal('${i.id}',-1)">-</button>
+        </div>
+      `;
+      container.appendChild(row);
+      total += i.price * i.qty;
+    });
+    document.getElementById('total').innerText = total;
+  }
+  window.changeQtyLocal = function(id,delta){ changeQty(id,delta); }
+
+  // helpers for classification
+  function parseRange(r){
+    if(!r) return null;
+    // accept formats like "1-3" or "1 to 3" or "1"
+    const m = String(r).match(/(\d+)\s*(?:-|to)?\s*(\d+)?/i);
+    if(!m) return null;
+    const a = parseInt(m[1],10);
+    const b = m[2] ? parseInt(m[2],10) : a;
+    return { min: a, max: b };
+  }
+  function inRange(ageRangeStr, low, high){
+    const r = parseRange(ageRangeStr);
+    if(!r) return false;
+    // overlap check
+    return !(r.max < low || r.min > high);
+  }
+  function isBoy(item){
+    const g = (item.gender || item.sex || '').toString().toLowerCase();
+    return g.includes('boy') || g.includes('male') || (!g && (item.name||'').toLowerCase().includes('boy') );
+  }
+  function isGirl(item){
+    const g = (item.gender || item.sex || '').toString().toLowerCase();
+    return g.includes('girl') || g.includes('female') || (!g && (item.name||'').toLowerCase().includes('girl') || (item.name||'').toLowerCase().includes('frock') );
+  }
+  function isToy(item){
+    const t = (item.type || item.category || '').toString().toLowerCase();
+    if(t.includes('toy') || (item.tags && item.tags.join(' ').toLowerCase().includes('toy'))) return true;
+    const n = (item.name||'').toLowerCase();
+    return n.includes('toy') || n.includes('puzzle') || n.includes('game') || n.includes('doll') || n.includes('truck');
+  }
+
+  // escape helper
+  function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // render single card into a section grid
+  function renderCardIntoSection(item){
+    const targetKey = getCategoryKeyForItem(item);
+    if(!targetKey) return; // skip if not mappable
+    const section = sectionMap[targetKey];
+    if(!section) return;
+    // ensure section body shown (not required but helpful)
+    section.body.classList.remove('hidden');
+    section.header.querySelector('.small').textContent = '−';
+    const grid = section.grid;
+    const card = document.createElement('div');
+    card.className = 'card';
+    const imgSrc = (item.image && item.image.startsWith('http')) ? item.image : (BASE_PATH + (item.image || '') );
+    card.innerHTML = `
+      <img src="${imgSrc}" alt="${escapeHtml(item.name)}" loading="lazy" />
+      <h4>${escapeHtml(item.name)}</h4>
+      <div class="small">Age: ${escapeHtml(item.ageRange || '')} | Size: ${escapeHtml(item.size || '')}</div>
+      <div class="price">₹ ${item.price || 0}</div>
+      <div class="small" style="margin-top:6px">${escapeHtml(item.desc || '')}</div>
+      <div style="margin-top:auto;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" onclick='addToCartFromBtn("${escapeHtml(item.id)}")'>Add to Cart</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+
+  function getCategoryKeyForItem(item){
+    for(const cat of CATEGORIES){
+      try{
+        if(cat.matcher(item)) return cat.key;
+      }catch(e){ /* ignore */ }
+    }
+    return null;
+  }
+
+  window.addToCartFromBtn = function(id){
+    const item = allItems.find(x=>x.id === id);
+    if(!item){ alert('Item not found'); return; }
+    addToCart(item);
+  };
+
+  // fetch data and initialize filtered list
+  try {
+    const resp = await fetch(JSON_FILE);
+    if(!resp.ok) throw new Error('Failed to fetch ' + JSON_FILE + ': ' + resp.status);
+    const data = await resp.json();
+    // determine if JSON is top-level object with keys (we expected array earlier),
+    // but user uses an array. Accept both shapes.
+    if(Array.isArray(data)) {
+      allItems = data;
+    } else if(typeof data === 'object') {
+      // If the JSON is organized per-section (older option) merge all arrays
+      allItems = [];
+      Object.values(data).forEach(v=>{
+        if(Array.isArray(v)) allItems = allItems.concat(v);
+      });
+    } else {
+      allItems = [];
+    }
+    applyFiltersAndSort(true);
+  } catch(err){
+    sectionsContainer.innerHTML = `<div style="color:#c00;padding:20px">Error loading ${JSON_FILE}: ${err.message}</div>`;
+    console.error(err);
+  }
+
+  // filtering, sorting and pagination control
+  function applyFiltersAndSort(resetShown){
+    const q = (searchInput.value||'').trim().toLowerCase();
+    // filtered based on search (name or desc)
+    filtered = allItems.filter(i=>{
+      if(!q) return true;
+      return String(i.name||'').toLowerCase().includes(q) || String(i.desc||'').toLowerCase().includes(q);
+    });
+    // sort
+    const sortBy = sortBySelect.value;
+    filtered.sort((a,b)=>{
+      if(sortBy === 'price') return (a.price || 0) - (b.price || 0);
+      // default name
+      return String(a.name||'').localeCompare(String(b.name||''), undefined, {sensitivity:'base'});
+    });
+    if(resetShown){
+      shownCount = 0;
+      // clear existing section grids
+      Object.values(sectionMap).forEach(s=>{
+        s.grid.innerHTML = '';
+        // keep headers collapsed by default
+        s.body.classList.add('hidden');
+        s.header.querySelector('.small').textContent = '+';
+      });
+    }
+    // render initial page
+    renderNextPage();
+  }
+
+  function renderNextPage(){
+    pageSize = parseInt(pageSizeSelect.value,10) || 10;
+    const start = shownCount;
+    const end = Math.min(shownCount + pageSize, filtered.length);
+    const slice = filtered.slice(start, end);
+    // append each item into its category section
+    slice.forEach(item => renderCardIntoSection(item));
+    shownCount = end;
+    // hide load more if finished
+    if(shownCount >= filtered.length) loadMoreBtn.style.display = 'none';
+    else loadMoreBtn.style.display = 'inline-block';
+  }
+
+  // UI events
+  loadMoreBtn.addEventListener('click', ()=> renderNextPage());
+  pageSizeSelect.addEventListener('change', ()=> { shownCount = 0; applyFiltersAndSort(true); });
+  searchInput.addEventListener('input', ()=> { shownCount = 0; applyFiltersAndSort(true); });
+  sortBySelect.addEventListener('change', ()=> { shownCount = 0; applyFiltersAndSort(true); });
+
+  // menu behavior
+  document.getElementById('menuHome').addEventListener('click', function(e){ e.preventDefault(); window.scrollTo({top:0,behavior:'smooth'}); });
+  document.getElementById('menuProducts').addEventListener('click', function(e){ e.preventDefault(); document.getElementById('productsTop').scrollIntoView({behavior:'smooth'}); });
+  document.getElementById('menuContact').addEventListener('click', function(e){ e.preventDefault(); document.getElementById('contact').scrollIntoView({behavior:'smooth'}); });
+  document.getElementById('menuCart').addEventListener('click', function(e){ e.preventDefault(); document.querySelector('.cartPanel').scrollIntoView({behavior:'smooth'}); });
+
+  // cart controls
+  document.getElementById('clearCart').addEventListener('click', ()=>{
+    if(confirm('Clear cart?')){ cart = []; saveCart(); }
+  });
+  document.getElementById('checkout').addEventListener('click', ()=>{
+    if(cart.length === 0){ alert('Cart is empty'); return; }
+    const lines = cart.map(i=>`${i.name} x ${i.qty} = ₹${i.qty * i.price}`);
+    const total = cart.reduce((s,i)=> s + i.qty * i.price, 0);
+    alert(`Invoice\n\n${lines.join('\n')}\n\nTotal: ₹ ${total}\n\n(Checkout demo — no payment integrated)`);
+  });
+
+  // initial cart render
+  renderCart();
+
+})();
+</script>
+</body>
+</html>
